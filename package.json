@@ -1,0 +1,17 @@
+{
+  "name": "discord-security-bot",
+  "version": "1.0.0",
+  "description": "Discord security bot with mass kick/ban protection and vanity URL protection",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "discord.js": "^14.24.2",
+    "dotenv": "^16.4.5"
+  }
+}

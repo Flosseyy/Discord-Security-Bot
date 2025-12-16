@@ -1,0 +1,92 @@
+import { SlashCommandBuilder, PermissionsBitField } from 'discord.js';
+import { isOwner } from '../utils/config.js';
+
+const PERMISSION_CHOICES = [
+  { name: 'Administrator', value: 'Administrator' },
+  { name: 'Manage Server', value: 'ManageGuild' },
+  { name: 'Manage Roles', value: 'ManageRoles' },
+  { name: 'Manage Channels', value: 'ManageChannels' },
+  { name: 'Kick Members', value: 'KickMembers' },
+  { name: 'Ban Members', value: 'BanMembers' },
+  { name: 'Manage Messages', value: 'ManageMessages' },
+  { name: 'Manage Nicknames', value: 'ManageNicknames' },
+  { name: 'Manage Webhooks', value: 'ManageWebhooks' },
+  { name: 'View Audit Log', value: 'ViewAuditLog' },
+  { name: 'Mention Everyone', value: 'MentionEveryone' },
+  { name: 'Send Messages', value: 'SendMessages' },
+  { name: 'Embed Links', value: 'EmbedLinks' },
+  { name: 'Attach Files', value: 'AttachFiles' },
+  { name: 'Read Message History', value: 'ReadMessageHistory' },
+  { name: 'Connect (Voice)', value: 'Connect' },
+  { name: 'Speak (Voice)', value: 'Speak' },
+  { name: 'Mute Members', value: 'MuteMembers' },
+  { name: 'Deafen Members', value: 'DeafenMembers' },
+  { name: 'Move Members', value: 'MoveMembers' }
+];
+
+export const data = new SlashCommandBuilder()
+  .setName('permsremove')
+  .setDescription('Remove a permission from a role (Owner only)')
+  .addRoleOption(option =>
+    option.setName('role')
+      .setDescription('The role to modify')
+      .setRequired(true))
+  .addStringOption(option =>
+    option.setName('permission')
+      .setDescription('The permission to remove')
+      .setRequired(true)
+      .addChoices(...PERMISSION_CHOICES));
+
+export async function execute(interaction) {
+  try {
+    if (!isOwner(interaction.guild, interaction.user.id)) {
+      return await interaction.reply({
+        content: 'Only the server owner can use this command.',
+        ephemeral: true
+      });
+    }
+
+    const role = interaction.options.getRole('role');
+    const permission = interaction.options.getString('permission');
+
+    if (!role.editable) {
+      return await interaction.reply({
+        content: 'I cannot edit this role. It may be higher than my role or be a managed role.',
+        ephemeral: true
+      });
+    }
+
+    if (role.id === interaction.guild.id) {
+      return await interaction.reply({
+        content: 'Cannot modify the @everyone role.',
+        ephemeral: true
+      });
+    }
+
+    const permissionFlag = PermissionsBitField.Flags[permission];
+    const currentPermissions = role.permissions;
+    const hasPermission = currentPermissions.has(permissionFlag);
+
+    if (!hasPermission) {
+      return await interaction.reply({
+        content: `Role ${role.name} doesn't have the ${permission} permission.`,
+        ephemeral: true
+      });
+    }
+
+    const newPermissions = currentPermissions.remove(permissionFlag);
+    await role.setPermissions(newPermissions, `Permission removed by ${interaction.user.tag}`);
+
+    await interaction.reply({
+      content: `✅ Successfully removed **${permission}** permission from role **${role.name}**.`,
+      ephemeral: true
+    });
+
+  } catch (error) {
+    console.error('Permsremove command error:', error);
+    await interaction.reply({
+      content: 'An error occurred while removing the role permission.',
+      ephemeral: true
+    });
+  }
+}
